@@ -15,6 +15,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "parse5": "8.0.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
