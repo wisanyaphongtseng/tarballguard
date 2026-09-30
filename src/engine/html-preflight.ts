@@ -15,8 +15,22 @@ export function htmlComplexityViolation(html: string): string | undefined {
     if (html[i] !== '<') continue;
     if (++items > MAX_MARKUP_ITEMS) return 'HTML exceeds the markup-item limit.';
     if (html.startsWith('<!--', i)) {
-      const end = html.indexOf('-->', i + 4);
-      i = end < 0 ? html.length : end + 2;
+      // Only exempt a conservative subset of comments. Abrupt/recovery endings
+      // can expose markup to parse5 before a later literal "-->" terminator.
+      let position = i + 4;
+      if (html[position] === '>' || html.startsWith('->', position)) {
+        return 'HTML contains an unsafe or ambiguous comment.';
+      }
+      for (; position < html.length; position++) {
+        // In raw-text contexts, an apparent comment may contain an enclosing
+        // element's end tag. Do not exempt any region containing markup starts.
+        if (html[position] === '<') return 'HTML contains an unsafe or ambiguous comment.';
+        if (!html.startsWith('--', position)) continue;
+        if (html[position + 2] !== '>') return 'HTML contains an unsafe or ambiguous comment.';
+        break;
+      }
+      if (position === html.length) return 'HTML contains an unterminated comment.';
+      i = position + 2;
       continue;
     }
     const start = i;

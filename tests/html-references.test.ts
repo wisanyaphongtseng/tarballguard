@@ -92,9 +92,9 @@ describe('HTML literal-reference extraction', () => {
       .toEqual([{ tag: 'img', attribute: 'src', value: 'first.svg' }]);
   });
 
-  test('ignores fake tags in scripts, styles, comments, and text-only elements', () => {
+  test('ignores fake tags in scripts, styles, and text-only elements', () => {
     expect(evidence('<script>const fake = \'<script src="fake.js">\';</script>' +
-      '<!-- <img src="comment.svg"> --><style>/* <link href="fake.css"> */</style>' +
+      '<style>/* <link href="fake.css"> */</style>' +
       '<textarea><img src="text.svg"></textarea><title><img src="title.svg"></title>'))
       .toEqual([]);
   });
