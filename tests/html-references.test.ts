@@ -156,9 +156,9 @@ describe('bounded and inert HTML parsing', () => {
       .toThrow(expect.objectContaining({ code: 'INVALID_INPUT' }));
   });
 
-  test('handles deep markup without recursive traversal overflow', () => {
-    expect(evidence('<div>'.repeat(5000) + '<img src="deep.svg">' + '</div>'.repeat(5000)))
-      .toEqual([{ tag: 'img', attribute: 'src', value: 'deep.svg' }]);
+  test('rejects deep markup under the conservative structural-depth limit', () => {
+    expect(() => evidence('<div>'.repeat(5000) + '<img src="deep.svg">' + '</div>'.repeat(5000)))
+      .toThrow(expect.objectContaining({ code: 'HTML_COMPLEXITY_LIMIT' }));
   });
 
   test('never executes scripts, fetches resources, or accesses browser DOM APIs', () => {

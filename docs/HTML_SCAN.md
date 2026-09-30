@@ -25,7 +25,9 @@ The scanner preserves extraction source order, including duplicate source elemen
 
 Supported referring filenames end in `.html` or `.htm`, with case-insensitive extension recognition. Full archive path matching remains case-sensitive. The index is trusted to contain ingestion's safe canonical regular-file paths; caller-fabricated indexes are not validated. The scanner accepts a path, not caller-supplied arbitrary HTML bytes.
 
-A missing file, directory, unsupported extension, invalid path, or noncanonical path produces `HtmlScanError` with code `INVALID_HTML_FILE`. HTML-looking content in a `.txt` file is not scanned. The existing extraction limit of 1 MiB and strict UTF-8 decoding apply; `HTML_TOO_LARGE` or `INVALID_UTF8` errors propagate without partial findings. The scanner reads only the selected HTML payload and other files' path metadata. It does not read asset payloads, execute scripts, load resources, render markup, or expose package payload bytes in results.
+A missing file, directory, unsupported extension, invalid path, or noncanonical path produces `HtmlScanError` with code `INVALID_HTML_FILE`. HTML-looking content in a `.txt` file is not scanned. Extraction's byte, structural-work, and 5,000-reference limits apply; known extraction errors propagate without partial findings. The scanner reads only the selected HTML payload and other files' path metadata. It does not read asset payloads, execute scripts, load resources, render markup, or expose package payload bytes in results.
+
+The public API remains unchanged. An internal scan context uses one regular-file path Map for both referring-file retrieval and target membership. Package audit builds that context once and reuses it across all HTML files. Standalone scans build a context for their single call. No shared mutable cache or archive Set is rebuilt per file during audit.
 
 ## Core demonstration fixture
 

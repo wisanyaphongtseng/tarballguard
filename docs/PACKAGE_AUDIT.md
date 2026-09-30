@@ -10,7 +10,7 @@ Pass an index returned by successful ingestion. The synchronous API checks the r
 
 The result contains `outcome`, `requiredFileFindings`, `htmlFindings`, `htmlFilesScanned`, `htmlCoverageIssues`, and `summary`. All result objects and arrays are frozen, including findings, reference objects, locations, and coverage issue records. Existing findings and references are preserved without reinterpretation or copying. No package payload bytes are returned.
 
-Public types are `PackageAudit`, `AuditOutcome`, `AuditSummary`, and `HtmlCoverageIssue`. A coverage issue contains only `htmlPath`, `code` (`HTML_TOO_LARGE` or `INVALID_UTF8`), and an explanatory `reason`. The successful `htmlFilesScanned` list includes files with zero supported references. Unscanned supported files are identified by coverage issue paths.
+Public types are `PackageAudit`, `AuditOutcome`, `AuditSummary`, and `HtmlCoverageIssue`. A coverage issue contains only `htmlPath`, a typed computational/decoding limit `code`, and an explanatory `reason`. The successful `htmlFilesScanned` list includes files with zero supported references. Unscanned supported files are identified by coverage issue paths.
 
 ## Exact outcome decision table
 
@@ -51,7 +51,11 @@ HTML paths are sorted by JavaScript code-unit order before scanning. Successful 
 
 `checkRequiredFiles` runs first. Unsafe paths or invalid policy input propagate as `RequiredFilePolicyError`; no audit result or partial HTML work is returned for an invalid policy.
 
-Only recognized extraction limitations `HtmlExtractionError` with code `HTML_TOO_LARGE` or `INVALID_UTF8` become per-file coverage issues. Scanning continues with other supported files. The 1 MiB HTML cap and strict UTF-8 policy remain unchanged. A known scan failure cannot yield CHECKED_NO_ISSUES, even when other files are clean or required files are found.
+Recognized `HtmlExtractionError` coverage codes are `HTML_TOO_LARGE`, `INVALID_UTF8`, `HTML_COMPLEXITY_LIMIT`, and `HTML_REFERENCE_LIMIT`. These become per-file coverage issues. Scanning continues with other supported files. The 1 MiB HTML cap and strict UTF-8 policy remain unchanged. A known scan failure cannot yield CHECKED_NO_ISSUES, even when other files are clean or required files are found.
+
+`MAX_REFERENCES_PER_PACKAGE` is an inclusive 25,000 HTML-finding budget, including FOUND, MISSING, UNKNOWN, and SKIPPED. A file that cannot fit completely in the remaining budget receives `PACKAGE_REFERENCE_LIMIT`: none of that file's findings are retained, it is not counted as successfully scanned, and earlier findings remain unchanged. The scanner temporarily produces at most 5,000 findings from one file; the retained package array never exceeds 25,000. Later files are still considered, including zero-reference files or files that fit the remaining budget. No silent truncation occurs. Required-file findings remain separate from this HTML-reference budget.
+
+An internal regular-file Map is built once per audit for HTML lookup and membership. Discovery uses its keys, avoiding per-HTML array searches and Set reconstruction. Required policy validation still uses its existing checker once. See [HTML_HARDENING.md](HTML_HARDENING.md).
 
 Unexpected errors propagate, including generic errors, range errors, `HtmlScanError`, and extraction `INVALID_INPUT`. Those indicate programmer/invariant failures under a trusted ingestion index and must not be hidden as coverage issues. The composition returns no partial audit result for such failures.
 

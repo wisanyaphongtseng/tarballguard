@@ -4,6 +4,7 @@ import { ingestArchive } from '../src/engine/archive';
 import { auditPackage } from '../src/engine/package-audit';
 import { HtmlExtractionError, MAX_HTML_BYTES } from '../src/engine/html-references';
 import * as htmlScan from '../src/engine/html-scan';
+import * as htmlScanInternal from '../src/engine/html-scan-internal';
 import { RequiredFilePolicyError } from '../src/engine/required-files';
 import { tgzFixture } from './archive-fixture';
 import type { FixtureEntry } from './archive-fixture';
@@ -130,13 +131,13 @@ describe('HTML coverage and invariants', () => {
     new HtmlExtractionError('INVALID_INPUT', 'Wrong payload type'), new htmlScan.HtmlScanError(),
   ])('does not swallow unexpected error %s', async error => {
     const index = await indexWithHtml('<img src=x>');
-    vi.spyOn(htmlScan, 'scanHtmlFile').mockImplementationOnce(() => { throw error; });
+    vi.spyOn(htmlScanInternal, 'scanHtmlFileInContext').mockImplementationOnce(() => { throw error; });
     expect(() => auditPackage(index)).toThrow(error);
   });
 
   test('invalid required policy is an explicit error before HTML scanning', async () => {
     const index = await indexWithHtml('<script src=missing.js></script>');
-    const spy = vi.spyOn(htmlScan, 'scanHtmlFile');
+    const spy = vi.spyOn(htmlScanInternal, 'scanHtmlFileInContext');
     expect(() => auditPackage(index, ['../outside'])).toThrow(RequiredFilePolicyError);
     expect(() => auditPackage(index, null as unknown as readonly string[])).toThrow(RequiredFilePolicyError);
     expect(spy).not.toHaveBeenCalled();

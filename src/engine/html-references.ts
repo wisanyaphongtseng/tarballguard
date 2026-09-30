@@ -1,5 +1,6 @@
 import { defaultTreeAdapter, parse } from 'parse5';
 import type { DefaultTreeAdapterTypes } from 'parse5';
+import { htmlComplexityViolation } from './html-preflight';
 
 export interface HtmlReference {
   readonly tag: 'script' | 'link' | 'img';
@@ -9,10 +10,12 @@ export interface HtmlReference {
 }
 
 export const MAX_HTML_BYTES = 1024 * 1024;
+export const MAX_REFERENCES_PER_HTML = 5000;
+export type HtmlCoverageErrorCode = 'HTML_TOO_LARGE' | 'INVALID_UTF8' | 'HTML_COMPLEXITY_LIMIT' | 'HTML_REFERENCE_LIMIT';
 
 export class HtmlExtractionError extends Error {
   constructor(
-    public readonly code: 'INVALID_INPUT' | 'HTML_TOO_LARGE' | 'INVALID_UTF8',
+    public readonly code: 'INVALID_INPUT' | HtmlCoverageErrorCode,
     message: string,
   ) {
     super(message);
@@ -37,6 +40,8 @@ export function extractHtmlReferences(input: string | Uint8Array): readonly Html
     throw new HtmlExtractionError('INVALID_UTF8', 'HTML bytes must be valid UTF-8.');
   }
 
+  const violation = htmlComplexityViolation(html);
+  if (violation) throw new HtmlExtractionError('HTML_COMPLEXITY_LIMIT', violation);
   const document = parse(html, { sourceCodeLocationInfo: true, scriptingEnabled: true });
   const stack: DefaultTreeAdapterTypes.Node[] = [document];
   const references: { reference: HtmlReference; offset: number }[] = [];
@@ -49,6 +54,9 @@ export function extractHtmlReferences(input: string | Uint8Array): readonly Html
         const attribute = tag === 'link' ? 'href' : 'src';
         const target = node.attrs.find(item => item.name === attribute && !item.namespace);
         if (target) {
+          if (references.length === MAX_REFERENCES_PER_HTML) {
+            throw new HtmlExtractionError('HTML_REFERENCE_LIMIT', 'HTML exceeds the reference limit.');
+          }
           const source = node.sourceCodeLocation?.attrs?.[attribute];
           references.push({
             offset: source?.startOffset ?? Number.POSITIVE_INFINITY,

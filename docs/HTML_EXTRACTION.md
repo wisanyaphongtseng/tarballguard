@@ -41,7 +41,9 @@ Byte input is decoded as strict UTF-8. An initial UTF-8 BOM is removed by `TextD
 
 `MAX_HTML_BYTES` is a fixed 1 MiB per HTML input, below ingestion's default 10 MiB file cap. No prior HTML-specific cap existed. Both input forms are checked before parsing; strings are measured by UTF-8 encoded byte length, with an early character-length rejection before allocating an encoded copy. Byte views are checked by their own `byteLength`, not their backing buffer size. Empty input is valid and returns an empty array without an audit/pass result.
 
-Invalid input, oversize HTML, and invalid UTF-8 throw `HtmlExtractionError` with codes `INVALID_INPUT`, `HTML_TOO_LARGE`, and `INVALID_UTF8`. Ordinary malformed HTML uses standards-based recovery rather than failing the whole file. This is not an HTML validity checker. Iterative tree traversal avoids application recursion overflow. The byte cap bounds input size; it is not a hard memory quota or parsing-time guarantee.
+Before parse5, a linear conservative structural preflight limits markup items to 25,000, tag spans to 65,536 UTF-16 code units, attributes per tag to 256, and approximate structural depth to 256. Extraction retains at most 5,000 references per HTML file. Boundaries are inclusive. Excess structural work throws `HTML_COMPLEXITY_LIMIT`; excess references throw `HTML_REFERENCE_LIMIT` before appending the next reference, with no partial array returned. See [HTML_HARDENING.md](HTML_HARDENING.md) for the algorithm and limitations.
+
+Invalid input, oversize HTML, and invalid UTF-8 throw `HtmlExtractionError` with codes `INVALID_INPUT`, `HTML_TOO_LARGE`, and `INVALID_UTF8`. Ordinary malformed HTML within conservative limits uses standards-based recovery rather than failing the whole file. This is not an HTML validity checker. Iterative tree traversal avoids application recursion overflow. These bounds do not prove a hard memory quota or parsing-time guarantee.
 
 Parsing never renders markup, executes scripts, evaluates attributes, or loads resources. Future consumers must render evidence as escaped text. No UI, worker, telemetry, resolver, finding statuses, or archive-format changes are included.
 
