@@ -1,0 +1,6 @@
+{
+  "name": "b08-archive-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "files": ["data.txt"]
+}

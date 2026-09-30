@@ -1,0 +1,6 @@
+{
+  "name": "b08-unicode-archive-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "files": ["café.svg"]
+}
