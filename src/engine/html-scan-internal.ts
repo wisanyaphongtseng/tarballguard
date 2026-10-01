@@ -1,5 +1,5 @@
 import type { ArchiveFile, ArchiveIndex } from './archive-model';
-import { extractHtmlReferences } from './html-references';
+import { extractHtmlDocument } from './html-references';
 import { HtmlScanError, isSupportedHtmlPath } from './html-scan';
 import type { HtmlAssetFinding } from './html-scan';
 import { resolveHtmlReference } from './reference-resolution';
@@ -17,8 +17,9 @@ export function scanHtmlFileInContext(
   if (!isSupportedHtmlPath(htmlPath)) throw new HtmlScanError();
   const htmlFile = files.get(htmlPath);
   if (!htmlFile) throw new HtmlScanError();
-  return Object.freeze(extractHtmlReferences(htmlFile.bytes).map((reference): HtmlAssetFinding => {
-    const resolved = resolveHtmlReference(htmlPath, reference);
+  const document = extractHtmlDocument(htmlFile.bytes);
+  return Object.freeze(document.references.map((reference): HtmlAssetFinding => {
+    const resolved = resolveHtmlReference(htmlPath, reference, document.hasBaseHref);
     if (resolved.status === 'RESOLVED') {
       return Object.freeze({ status: files.has(resolved.targetPath) ? 'FOUND' : 'MISSING',
         htmlPath, reference, targetPath: resolved.targetPath });

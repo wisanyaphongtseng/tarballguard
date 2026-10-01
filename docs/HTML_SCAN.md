@@ -19,7 +19,7 @@ Each frozen finding contains `status`, `htmlPath`, and the original frozen extra
 
 Matching is exact and case-sensitive. Unicode forms remain distinct. Directories do not appear in ingestion's `files` array and cannot satisfy existence checks. For a reference `./assets` with only `assets/` packed, the finding is MISSING. A reference `./assets/` remains UNKNOWN under the resolver's directory-like syntax rule.
 
-The scanner preserves extraction source order, including duplicate source elements. It does not sort or deduplicate findings. Missing assets are normal findings, not engine exceptions. Query/fragment stripping, percent preservation, path normalization, external URL detection, and all other classification behavior come entirely from the resolver. For `./app.js?v=1#boot`, lookup uses `app.js` relative to the HTML directory while the reference retains the suffix. `hello%20world.js` matches only a literal encoded filename, not `hello world.js`.
+The scanner preserves extraction source order, including duplicate source elements. It does not sort or deduplicate findings. Missing assets are normal findings, not engine exceptions. Query/fragment stripping, percent-path exclusion, path normalization, external URL detection, and all other classification behavior come entirely from the resolver. For `./app.js?v=1#boot`, lookup uses `app.js` relative to the HTML directory while the reference retains the suffix. `hello%20world.js` is UNKNOWN regardless of either filename being present. The scanner supplies document base-href presence to the resolver; affected relative references are UNKNOWN without a target lookup.
 
 ## Referring file and bounds
 
@@ -50,6 +50,6 @@ This fixture is generated from the deterministic test TAR builder; it is not an 
 
 FOUND proves only logical packed-path existence. UNKNOWN is not PASS. SKIPPED is not proof of package completeness. No package verdict, required-file composition, unauditable decision, or package-wide scanner is added.
 
-Existing extraction/resolution limitations remain, including literal HTML scope, scripting-enabled `noscript` behavior, literal percent sequences, heuristic template detection, and absent document-level `<base>` semantics. Targets use the referring-file-relative logical model; this does not guarantee browser/runtime behavior. PAX/GNU archive support is unchanged.
+Existing extraction/resolution limitations remain, including literal HTML scope, scripting-enabled `noscript` behavior, heuristic template detection, and deliberately unsupported percent/base URL semantics. Targets use the referring-file-relative logical model; this does not guarantee browser/runtime behavior. PAX/GNU archive support is unchanged.
 
 Run `npm test`, `npm run typecheck`, and `npm run build`.

@@ -25,6 +25,13 @@ export class HtmlExtractionError extends Error {
 
 /** Pure evidence extraction. Values are HTML-parser-decoded, not URL-decoded. */
 export function extractHtmlReferences(input: string | Uint8Array): readonly HtmlReference[] {
+  return extractHtmlDocument(input).references;
+}
+
+/** Document context is parsed inertly; base URLs are never resolved or loaded. */
+export function extractHtmlDocument(input: string | Uint8Array): {
+  readonly references: readonly HtmlReference[]; readonly hasBaseHref: boolean;
+} {
   if (typeof input !== 'string' && !(input instanceof Uint8Array)) {
     throw new HtmlExtractionError('INVALID_INPUT', 'Expected HTML text or UTF-8 bytes.');
   }
@@ -43,12 +50,17 @@ export function extractHtmlReferences(input: string | Uint8Array): readonly Html
   const violation = htmlComplexityViolation(html);
   if (violation) throw new HtmlExtractionError('HTML_COMPLEXITY_LIMIT', violation);
   const document = parse(html, { sourceCodeLocationInfo: true, scriptingEnabled: true });
-  const stack: DefaultTreeAdapterTypes.Node[] = [document];
+  const stack: { node: DefaultTreeAdapterTypes.Node; inTemplate: boolean }[] = [{ node: document, inTemplate: false }];
+  let hasBaseHref = false;
   const references: { reference: HtmlReference; offset: number }[] = [];
   while (stack.length > 0) {
-    const node = stack.pop()!;
+    const { node, inTemplate } = stack.pop()!;
     if (defaultTreeAdapter.isElementNode(node)) {
       const tag = node.tagName;
+      if (!inTemplate && node.namespaceURI === 'http://www.w3.org/1999/xhtml' &&
+          tag === 'base' && node.attrs.some(item => item.name === 'href' && !item.namespace)) {
+        hasBaseHref = true;
+      }
       if (node.namespaceURI === 'http://www.w3.org/1999/xhtml' &&
           (tag === 'script' || tag === 'link' || tag === 'img')) {
         const attribute = tag === 'link' ? 'href' : 'src';
@@ -69,16 +81,16 @@ export function extractHtmlReferences(input: string | Uint8Array): readonly Html
       }
       // Template contents live in a separate fragment, not childNodes.
       if (tag === 'template' && node.namespaceURI === 'http://www.w3.org/1999/xhtml') {
-        stack.push(defaultTreeAdapter.getTemplateContent(node as DefaultTreeAdapterTypes.Template));
+        stack.push({ node: defaultTreeAdapter.getTemplateContent(node as DefaultTreeAdapterTypes.Template), inTemplate: true });
       }
     }
     if ('childNodes' in node) {
       for (let position = node.childNodes.length - 1; position >= 0; position--) {
-        stack.push(node.childNodes[position]);
+        stack.push({ node: node.childNodes[position], inTemplate });
       }
     }
   }
   // Tree correction (for example, foster parenting) can differ from source order.
   references.sort((a, b) => a.offset - b.offset);
-  return Object.freeze(references.map(item => item.reference));
+  return Object.freeze({ references: Object.freeze(references.map(item => item.reference)), hasBaseHref });
 }

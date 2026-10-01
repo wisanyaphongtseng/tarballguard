@@ -1,0 +1,7 @@
+// Safe deterministic packed artifacts from section H; no package execution.
+export const promotionFixtures = {
+  "policyOnly": "H4sIAAAAAAACAytITM5OTE/VD3J1dPF11ctNYaA+MDAwMDAzMQHTBgYG6LSBgaEJgg0SNzQyMDViUDBgoAMoLS5JLGIwMKCGJ5E9N0RAcWJaqkJyfl5JUX4OwygYBaNgFIyCEQMAZkI2IQAIAAA=",
+  "baseFalseClean": "H4sIAAAAAAACA+3TzQ7CIAwHcB6F8ACjE8TLxrsgQ4dfIRQTH9/oDi67eEETTX+XNr00TfNPzh/dPsghYpHxMoRbM5bzidUEAGC0flYAWFYAo179Y96qtdowDuwLrlhcZgA1jpwf9yO6rcPAxxx2vXCIoaAUtkOfYyocs++FS6k5oLCdnKaWkf+R5vmfXl19x9v8L/t2ZTTlnxBCPuoO6OzjVgAKAAA=",
+  "encodedSpace": "H4sIAAAAAAACA+3TQQrCMBAF0BwlFNw2v03qqvYuIQk2Gm1IInp8sSKErmtBydvMMLMahu+lOsujYdrGxOxVm0c9posjawKAvRBzBbCsQJf1r3nDO84JBdnALSYZCLDGkflxP6KPKlifaAzqUI3GuWnX4j4Fp+tTrIaevfcDKf6Sz/M//59+vr9d/pd9Izjakv+iKIpvegL9tTzTAAoAAA==",
+  "encodedName": "H4sIAAAAAAACA+3TQQ7CIBAFUI7SNHFbfgVc1d6FALEoWgI0enyjbgjr2kTD28xkZjWZfC/VRZ4M1TYmam/aPLopXR1ZEwAcOH9XAGUFRNa/5j0TjJEGZANLTDIQYI0j8+N+xBBVsD41MahjOxnn5t0e9zk43Z1jOw70sx9J9Zd8nv/y/1vlv+x7zkVf819VVfVNTyuPm5oACgAA"
+} as const;
