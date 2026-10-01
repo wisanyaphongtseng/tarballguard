@@ -33,7 +33,7 @@ test('actual missing-reference fixture shows missing evidence, expected path, an
 
 test('required files distinguish missing and found, with missing first', async () => {
   const html = render(await report('', ['app.js', 'dist/index.html']));
-  expect(html).toContain('Required files');
+  expect(html).toContain('Required package files');
   expect(html).toContain('MISSING — Missing from packed package');
   expect(html).toContain('FOUND — Present');
   expect(html.indexOf('>dist/index.html</code>')).toBeLessThan(html.indexOf('>app.js</code>'));
@@ -65,6 +65,8 @@ test('not auditable explains missing scope and suggests required files', async (
   expect(html).toContain('NOT_AUDITABLE');
   expect(html).toContain('No supported HTML files or required-file assertions');
   expect(html).toContain('Add expected package files above and scan again.');
+  expect(html).toContain('The audit could not perform a package-local check with the current rules.');
+  expect(html).not.toContain('B08');
 });
 
 test('only skipped references explain why no local assertions were checked', async () => {
@@ -81,7 +83,7 @@ test('coverage limitations show file, code and reason alongside missing findings
   expect(html).toContain('HTML_COMPLEXITY_LIMIT');
   expect(html).toContain(audit.htmlCoverageIssues[0].reason);
   expect(html).toContain('These files were not fully inspected, so the audit is incomplete.');
-  expect(html).toContain('Coverage gaps: <strong>1</strong>');
+  expect(html).toContain('<dt>Coverage gaps</dt><dd>1</dd>');
 });
 
 test('all rejected HTML explains the not-auditable outcome', async () => {
@@ -97,7 +99,7 @@ test('skipped references are collapsed and classified outside package-local chec
 
 test('found references show source, literal, packed target and presence', async () => {
   const html = render(await clean());
-  expect(html).toContain('Verified packed references');
+  expect(html).toContain('Validated references');
   expect(html).toContain('HTML source:');
   expect(html).toContain('&lt;script src=&quot;./app.js&quot;&gt;');
   expect(html).toContain('Packed target');
@@ -106,7 +108,7 @@ test('found references show source, literal, packed target and presence', async 
 
 test('empty sections and zero coverage count are omitted', async () => {
   const html = render(await clean());
-  for (const label of ['Missing packed assets', 'Coverage limitations', 'Could not determine', 'Required files', 'Outside package-local checks', 'Coverage gaps:']) {
+  for (const label of ['Missing packed assets', 'Coverage limitations', 'Could not determine', 'Required package files', 'Outside package-local checks', '<dt>Coverage gaps</dt>']) {
     expect(html).not.toContain(label);
   }
 });
@@ -120,7 +122,7 @@ test('counts use the audit summary rather than visible findings', async () => {
   }
   expect(html).toContain('Checked assertions: <strong>1110</strong>');
   expect(html).toContain('HTML scanned: <strong>12 / 34</strong>');
-  expect(html).toContain('Coverage gaps: <strong>22</strong>');
+  expect(html).toContain('<dt>Coverage gaps</dt><dd>22</dd>');
 });
 
 test('malicious literals and paths are escaped without creating markup', async () => {

@@ -27,7 +27,7 @@ export function scanErrorMessage(error: unknown): string {
   if (!(error instanceof ScanError)) return 'The scan could not complete. Try again with your package.';
   switch (error.code) {
     case 'UNSUPPORTED_TAR':
-      return 'This package uses an archive format B08 does not support yet. No clean result was produced. Some extended TAR headers, including Unicode or very long filenames, are unsupported. See current v0 limitations below; this does not mean the package is broken.';
+      return 'This package uses an archive format this scanner does not support yet. No clean result was produced. Some extended TAR headers, including Unicode or very long filenames, are unsupported. See current v0 limitations below; this does not mean the package is broken.';
     case 'UNSAFE_PATH': case 'DUPLICATE_PATH': case 'PATH_CONFLICT':
       return 'This archive contains unsafe or conflicting file paths. It was not scanned.';
     case 'INVALID_INPUT': case 'INVALID_GZIP': case 'INVALID_TAR':

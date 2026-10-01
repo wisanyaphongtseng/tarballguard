@@ -1,17 +1,19 @@
-# npm Packed Web-Asset Preflight
+# TarballGuard
 
-B08 is an experimental v0 browser-local checker for the npm `.tgz` you are publishing. It finds literal HTML references to files absent from that packed artifact, even when those files exist in your repository.
+npm Packed Web-Asset Preflight
 
-For example, a package containing `index.html` and `style.css` can still reference `./app.js` without packing it. B08 reports FOUND `style.css` and MISSING `app.js`, with the referring HTML path and source location. **Try example** scans a tiny synthetic archive through the same worker and engine as a selected package. It contains no third-party package code and is visibly labelled as a demo.
+TarballGuard is an experimental v0 browser-local checker for the npm `.tgz` you are publishing. It finds literal HTML references to files absent from that packed artifact, even when those files exist in your repository.
+
+For example, a package containing `index.html` and `style.css` can still reference `./app.js` without packing it. TarballGuard reports FOUND `style.css` and MISSING `app.js`, with the referring HTML path and source location. **Run sample scan** scans a tiny synthetic archive through the same worker and engine as a selected package. It contains no third-party package code and is visibly labelled as a demo.
 
 ## Use it
 
 1. Run `npm pack` in your package directory. `npm pack --dry-run` previews the file list but does not create the archive to scan.
-2. Select or drop the actual `.tgz` into B08.
+2. Select or drop the actual `.tgz` into TarballGuard.
 3. Optionally list required package-relative files, one per line, such as `dist/index.html`.
 4. Scan and inspect missing files, verified paths, uncertainty, and coverage limitations. Use **Scan another package** to reset.
 
-Required paths are relative to the stripped `package/` root. Blank lines are ignored; other lines, including spaces and duplicates, go unchanged to engine validation. Matching is case-sensitive. B08 does not run npm commands.
+Required paths are relative to the stripped `package/` root. Blank lines are ignored; other lines, including spaces and duplicates, go unchanged to engine validation. Matching is case-sensitive. TarballGuard does not run npm commands.
 
 ## Scope and outcomes
 
@@ -26,7 +28,7 @@ FOUND proves packed-path presence only. UNKNOWN is uncertain coverage; SKIPPED i
 
 ## Privacy and limitations
 
-Processing occurs locally in a browser Web Worker. B08 does not upload package contents, execute package code, run install scripts, or render package HTML. Optional PostHog measurement sends only explicitly allowed coarse usage events and a random browser-local identifier. Events contain no filenames, paths, references, package contents, or required-file values. Application files and coarse usage metrics may leave the browser; package data stays local. There is no backend, registry lookup, or account system.
+Processing occurs locally in a browser Web Worker. TarballGuard does not upload package contents, execute package code, run install scripts, or render package HTML. Optional PostHog measurement sends only explicitly allowed coarse usage events and a random browser-local identifier. Events contain no filenames, paths, references, package contents, or required-file values. Application files and coarse usage metrics may leave the browser; package data stays local. There is no backend, registry lookup, or account system.
 
 Measurement is disabled without `VITE_POSTHOG_PROJECT_TOKEN` and `VITE_POSTHOG_HOST`, and always disabled in development and on localhost. The host must be an HTTPS origin. Use `?internal=1` to exclude founder traffic on a public build; this stores a local flag and removes the query parameter. `?internal=0` clears that flag. Demo scans send no experiment events. See [measurement and local storage](docs/EXPERIMENT_MEASUREMENT.md). No SDK, autocapture, replay, identification, or person profiles are used.
 
@@ -47,7 +49,7 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. To prepare a source link, set `VITE_SOURCE_REPOSITORY_URL` to the real public HTTPS repository URL in a local `.env` file before building; see `.env.example`. Blank or invalid URLs show a pending-source message rather than an invented link. Vite variables are public; do not put secrets in them.
+Open the local URL printed by Vite. To prepare a source link, set `VITE_SOURCE_REPOSITORY_URL` to the real public HTTPS repository URL in a local `.env` file before building; see `.env.example`. Missing or invalid URLs fall back to https://github.com/wisanyaphongtseng/tarballguard. Vite variables are public; do not put secrets in them.
 
 ```sh
 npm test
@@ -56,7 +58,7 @@ npm run build
 npm run preview
 ```
 
-The build produces static files in `dist/`, including a separate module worker and Cloudflare Pages headers. Node 24.15.0 is pinned in `.nvmrc`. See [deployment and launch acceptance](docs/DEPLOYMENT.md) for Pages settings, production environment names, and the pending public acceptance checklist. A local build does not establish a public launch.
+The build produces static files in `dist/`, including a separate module worker and Cloudflare Pages headers. Node 24.15.0 is pinned in `.nvmrc`. See [deployment and launch acceptance](docs/DEPLOYMENT.md) for Pages settings, production environment names, and the release acceptance checklist. A local build does not establish a public launch.
 
 ## Architecture and tests
 

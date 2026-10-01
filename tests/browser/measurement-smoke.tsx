@@ -49,8 +49,8 @@ async function scan() {
   check(status().includes('ISSUES_FOUND'), 'Actual worker audit completes with missing file');
 }
 async function verify() {
-  mount(); await waitFor(() => Boolean(button('Try example')));
-  button('Try example').click(); await waitFor(() => status().includes('Scan complete'));
+  mount(); await waitFor(() => Boolean(button('Run sample scan')));
+  button('Run sample scan').click(); await waitFor(() => status().includes('Scan complete'));
   check(payloads.length === 0 && storage.getItem(EXPERIMENT_KEY) === null, 'Demo sends no events and creates no cohort');
   await scan();
   check(payloads.some(p => p.event === 'b08_real_scan_started') && payloads.some(p => p.event === 'b08_real_scan_completed'), 'Real worker scan emits coarse start/completion');
@@ -61,7 +61,7 @@ async function verify() {
   check(!payloads.some(p => p.event === 'b08_later_release_confirmed'), 'No/not sure emits no retention signal');
   await scan(); button('Yes').click(); await waitFor(() => payloads.some(p => p.event === 'b08_later_release_confirmed'));
   check(!payloads.some(p => p.event === 'b08_required_policy_reused'), 'Same-visit corrections do not count as policy reuse');
-  clock += REUSE_DELAY_MS; remount(); await waitFor(() => Boolean(button('Try example'))); await scan();
+  clock += REUSE_DELAY_MS; remount(); await waitFor(() => Boolean(button('Run sample scan'))); await scan();
   await waitFor(() => payloads.some(p => p.event === 'b08_required_policy_reused'));
   check(true, 'Later visit plus 30 minutes detects policy reuse locally');
   const serialized = JSON.stringify(payloads);
@@ -69,9 +69,9 @@ async function verify() {
   check(!['private-filename', 'secret-required', 'index.html', 'style.css', 'app.js', '<script', './app.js', ...local.policies.map(p => p.digest)].some(secret => serialized.includes(secret)), 'Payload inspection: no filename/path/HTML/reference/policy/digest');
   check(payloads.every(p => p.properties.$process_person_profile === false && p.properties.$geoip_disable === true), 'Every event disables person profiles and GeoIP enrichment');
   const previous = payloads.length;
-  remount(true); await waitFor(() => Boolean(button('Try example'))); await scan();
+  remount(true); await waitFor(() => Boolean(button('Run sample scan'))); await scan();
   check(payloads.length === previous && !document.querySelector('.experiment-card') && replacedUrl === '/', 'Internal mode sends nothing, strips query, suppresses prompts');
-  blocked = true; remount(); await waitFor(() => Boolean(button('Try example'))); await scan();
+  blocked = true; remount(); await waitFor(() => Boolean(button('Run sample scan'))); await scan();
   check(!document.querySelector('[role="alert"]') && payloads.length === previous, 'Blocked analytics leaves actual worker scan successful');
   check((performance.getEntriesByType('resource') as PerformanceResourceTiming[]).every(p => new URL(p.name).origin === location.origin), 'Observed resources are local app/worker assets; no SDK/replay or package-resource loads');
   log('CAPTURE PAYLOADS (mock transport, not live PostHog):\n' + JSON.stringify(payloads, null, 2));

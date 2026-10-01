@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, test, vi } from 'vitest';
 import { createExamplePackage } from '../src/ui/example-package';
-import { sourceRepositoryUrl } from '../src/ui/source-link';
+import { DEFAULT_SOURCE_REPOSITORY_URL, sourceRepositoryUrl } from '../src/ui/source-link';
 import { LaunchNotes } from '../src/ui/Onboarding';
 import { ScanWorkflow, scanErrorMessage } from '../src/ui/scan-workflow';
 import { ScanError } from '../src/worker/client';
@@ -67,18 +67,19 @@ test('Try example cannot start a second scan while active', async () => {
   expect(workflow.getSnapshot()).toMatchObject({ phase: 'cancelled', inputKind: 'example' });
 });
 
-test('source configuration supplies an actual HTTPS link or a truthful pending area', () => {
+test('source configuration overrides fallback with a valid deployment-owned HTTPS link', () => {
+  expect(sourceRepositoryUrl(' https://github.com/example/project ')).toBe('https://github.com/example/project');
   expect(renderToStaticMarkup(<LaunchNotes sourceUrl="https://github.com/example/project" />))
-    .toContain('<a href="https://github.com/example/project" rel="noreferrer">Source available for inspection</a>');
-  const pending = renderToStaticMarkup(<LaunchNotes sourceUrl="" />);
-  expect(pending).toContain('Source repository link pending');
-  expect(pending).not.toContain('<a ');
+    .toContain('<a href="https://github.com/example/project" rel="noreferrer">View source on GitHub</a>');
 });
 
-test.each(['javascript:alert(1)', 'data:text/html,x', '/guess', 'http://example.test', 'https://user:secret@example.test', 'garbage'])
-  ('unsafe/invalid source configuration is not linked: %s', value => {
-    expect(sourceRepositoryUrl(value)).toBeUndefined();
-    expect(renderToStaticMarkup(<LaunchNotes sourceUrl={value} />)).not.toContain('<a ');
+test.each([undefined, '', 'javascript:alert(1)', 'data:text/html,x', '/guess', 'http://example.test', 'https://user:secret@example.test', 'garbage'])
+  ('missing/unsafe source configuration uses known public repository: %s', value => {
+    expect(sourceRepositoryUrl(value)).toBe(DEFAULT_SOURCE_REPOSITORY_URL);
+    const html = renderToStaticMarkup(<LaunchNotes sourceUrl={value} />);
+    expect(html).toContain('href="https://github.com/wisanyaphongtseng/tarballguard"');
+    expect(html).toContain('View source on GitHub');
+    expect(html).not.toMatch(/pending|B08/iu);
   });
 
 test('unsupported archive copy states support limitation and absence of clean result without blaming package', () => {
@@ -91,7 +92,7 @@ test('unsupported archive copy states support limitation and absence of clean re
 
 test('static metadata is meaningful with no remote image or invented canonical URL', async () => {
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
-  expect(html).toContain('<title>npm Packed Web-Asset Preflight</title>');
+  expect(html).toContain('<title>TarballGuard — npm Packed Web-Asset Preflight</title>');
   expect(html).toContain('name="description"');
   expect(html).toContain('property="og:title"');
   expect(html).toContain('property="og:description"');

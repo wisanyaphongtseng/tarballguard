@@ -30,7 +30,7 @@ Configure these **production build variables**, by name:
 - `VITE_POSTHOG_PROJECT_TOKEN`: the client-visible project capture token. Never use a PostHog personal API key.
 - `VITE_POSTHOG_HOST`: the intended HTTPS ingestion origin, without credentials, extra path, query, or fragment.
 
-Vite embeds these public values during the build. Changes require a new build/deployment. Do not commit real values; `.env` and `.env.*` are ignored, except the blank `.env.example`. Missing analytics configuration or an invalid/non-HTTPS host disables measurement without breaking scanning. A missing source URL displays a pending-source message and is not sufficient for public launch acceptance.
+Vite embeds these public values during the build. Changes require a new build/deployment. Do not commit real values; `.env` and `.env.*` are ignored, except the blank `.env.example`. Missing analytics configuration or an invalid/non-HTTPS host disables measurement without breaking scanning. Missing or invalid source configuration falls back to the known public repository, https://github.com/wisanyaphongtseng/tarballguard. Valid HTTPS configuration still overrides it.
 
 ## Exact manual prerequisites
 
@@ -78,7 +78,7 @@ This is local test tooling only, not a deployed server. Open the printed localho
 Ordinary acceptance uses `?internal=1`, verifying that the parameter disappears and local exclusion persists. Use only synthetic deterministic fixtures, never private packages.
 
 - Confirm title, description, source link/public repository, no console errors, responsive layout, keyboard controls/focus, static header responses, and a loaded native module worker.
-- Run **Try example**: FOUND `style.css`, MISSING `app.js`, source `index.html:2:9`, no real experiment events.
+- Run **Run sample scan**: FOUND `style.css`, MISSING `app.js`, source `index.html:2:9`, no real experiment events.
 - Select/drop the deterministic missing-reference fixture as user input. Check details, reset, replacement, and rescan. Do not assume a demo scan tests user-source measurement.
 - Check required `style.css` FOUND, missing `dist/index.html` MISSING, and explicit safe error for `../unsafe` policy.
 - Exercise all four outcomes using existing deterministic fixtures: missing, clean supported artifact, local check plus root-relative UNKNOWN, and no usable assertion. No generic pass or runtime-correctness claim is allowed.

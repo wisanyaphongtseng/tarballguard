@@ -56,7 +56,7 @@ async function verify() {
   check(content().includes('CHECKED_WITH_UNKNOWNS') && content().includes('Could not determine') && content().includes('/assets/runtime.js'), 'Unknown coverage visible');
   await scan(reportFixtures.notAuditable, 'not-auditable');
   check(content().includes('NOT_AUDITABLE') && content().includes('Add expected package files above and scan again.'), 'Not auditable has actionable explanation');
-  check(!content().includes('Verified packed references'), 'Empty findings sections absent');
+  check(!content().includes('Validated references'), 'Empty findings sections absent');
   await scan(reportFixtures.coverage, 'coverage');
   check(content().includes('CHECKED_WITH_UNKNOWNS') && content().includes('Coverage limitations') && content().includes('bad.html') && content().includes('HTML_COMPLEXITY_LIMIT'), 'Rejected HTML remains explicit coverage gap');
   await scan(reportFixtures.manyFound, 'many-found');

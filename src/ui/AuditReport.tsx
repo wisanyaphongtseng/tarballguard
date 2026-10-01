@@ -10,7 +10,7 @@ const outcomeCopy = {
   ISSUES_FOUND: 'Missing packed files were found.',
   CHECKED_NO_ISSUES: 'No issues found in the checks that were performed.',
   CHECKED_WITH_UNKNOWNS: 'No definite missing file was found, but some references or files could not be fully checked.',
-  NOT_AUDITABLE: 'B08 could not perform a package-local check with the current rules.',
+  NOT_AUDITABLE: 'The audit could not perform a package-local check with the current rules.',
 };
 const text = (value: unknown) => typeof value === 'string' ? visibleText(value) : 'Unavailable';
 const count = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
@@ -38,32 +38,32 @@ function ReferenceEvidence({ finding }: { finding: HtmlAssetFinding }) {
     Number.isSafeInteger(location.column) && location.column > 0;
   // Diagnostic syntax uses parser-decoded values, not raw HTML source spelling.
   const syntax = `<${text(finding.reference.tag)} ${text(finding.reference.attribute)}="${text(finding.reference.value)}">`;
-  return <>
+  return <div className="reference-evidence">
     <p className="evidence-source">HTML source: <code>{text(finding.htmlPath)}
       {hasLocation ? `:${location.line}:${location.column}` : ''}</code></p>
     <p className="field-label">Literal reference</p>
     <code className="report-code">{syntax}</code>
-  </>;
+  </div>;
 }
 
 function AssetFinding({ finding }: { finding: HtmlAssetFinding }) {
   return <>
     <ReferenceEvidence finding={finding} />
-    {'targetPath' in finding ? <>
+    {'targetPath' in finding ? <div className="target-evidence">
       <p className="field-label">{finding.status === 'MISSING' ? 'Expected packed file' : 'Packed target'}</p>
       <code className="report-code">{text(finding.targetPath)}</code>
       <p className={`finding-status ${finding.status === 'MISSING' ? 'missing-label' : ''}`}>
         {finding.status === 'MISSING' ? 'MISSING — Not found in package' : 'FOUND — Present in package'}
       </p>
-    </> : <p>{text(finding.reason)}</p>}
+    </div> : <p className="reference-reason">{text(finding.reason)}</p>}
   </>;
 }
 
 function RequiredFiles({ findings }: { findings: readonly RequiredFileFinding[] }) {
   const ordered = [...findings.filter(item => item.status === 'MISSING'), ...findings.filter(item => item.status === 'FOUND')];
   if (ordered.length === 0) return null;
-  return <section className="report-section" aria-labelledby="required-report-heading">
-    <h3 id="required-report-heading">Required files</h3>
+  return <section className="report-section required-section" aria-labelledby="required-report-heading">
+    <h3 id="required-report-heading">Required package files</h3>
     <ReportList items={ordered} label="required files" render={item => <>
       <code className="report-code">{text(item.path)}</code>
       <p className={`finding-status ${item.status === 'MISSING' ? 'missing-label' : ''}`}>
@@ -82,22 +82,21 @@ export function AuditReport({ audit }: { audit: PackageAudit }) {
   const skipped = audit.htmlFindings.filter(item => item.status === 'SKIPPED');
   const unsupportedHtml = audit.htmlFindings.filter(item => !['FOUND', 'MISSING', 'UNKNOWN', 'SKIPPED'].includes(item.status));
   const unsupportedRequired = audit.requiredFileFindings.filter(item => !['FOUND', 'MISSING'].includes(item.status));
-  const hasRequiredMissing = audit.requiredFileFindings.some(item => item.status === 'MISSING');
   const summary = audit.summary;
   return <article className="audit-report" aria-labelledby="report-heading">
     <header className={`report-summary ${knownOutcome ? audit.outcome.toLowerCase() : 'unrecognized'}`}>
-      <h2 id="report-heading">Packed package report</h2>
-      <p className="outcome-name">{text(audit.outcome)}</p>
+      <h2 id="report-heading">Artifact audit</h2>
       <p className="outcome-copy">{description}</p>
+      <p className="outcome-name">{text(audit.outcome)}</p>
       <dl className="report-counts">
         <div className="missing-count"><dt>Missing</dt><dd>{count(summary.missing)}</dd></div>
         <div><dt>Unknown</dt><dd>{count(summary.unknown)}</dd></div>
         <div><dt>Found</dt><dd>{count(summary.found)}</dd></div>
         <div><dt>Skipped</dt><dd>{count(summary.skipped)}</dd></div>
+        {summary.htmlFilesNotScanned !== 0 && <div className="coverage-count"><dt>Coverage gaps</dt><dd>{count(summary.htmlFilesNotScanned)}</dd></div>}
       </dl>
       <p className="report-totals">Checked assertions: <strong>{count(summary.checkedAssertions)}</strong><br />
         HTML scanned: <strong>{count(summary.htmlFilesScanned)} / {count(summary.htmlFilesDiscovered)}</strong> discovered
-        {summary.htmlFilesNotScanned !== 0 && <><br />Coverage gaps: <strong>{count(summary.htmlFilesNotScanned)}</strong></>}
       </p>
       <p className="help">Counts include required-file checks and HTML references. Coverage gaps are separate from Unknown findings.</p>
       {audit.outcome === 'NOT_AUDITABLE' && <>
@@ -119,7 +118,6 @@ export function AuditReport({ audit }: { audit: PackageAudit }) {
       <h3 id="missing-heading">Missing packed assets</h3>
       <ReportList items={missing} label="missing references" render={item => <AssetFinding finding={item} />} />
     </section>}
-    {hasRequiredMissing && <RequiredFiles findings={audit.requiredFileFindings} />}
 
     {audit.htmlCoverageIssues.length > 0 && <section className="report-section coverage-section" aria-labelledby="coverage-heading">
       <h3 id="coverage-heading">Coverage limitations</h3>
@@ -129,15 +127,16 @@ export function AuditReport({ audit }: { audit: PackageAudit }) {
         <p>{text(item.reason)}</p><p className="help">Code: <code>{text(item.code)}</code></p>
       </>} />
     </section>}
-    {unknown.length > 0 && <section className="report-section" aria-labelledby="unknown-heading">
+    {unknown.length > 0 && <section className="report-section unknown-section" aria-labelledby="unknown-heading">
       <h3 id="unknown-heading">Could not determine</h3>
       <p>These references could not be resolved confidently. They do not establish a missing file.</p>
       <ReportList items={unknown} label="unknown references" render={item => <AssetFinding finding={item} />} />
     </section>}
-    {!hasRequiredMissing && <RequiredFiles findings={audit.requiredFileFindings} />}
+    <RequiredFiles findings={audit.requiredFileFindings} />
 
     {found.length > 0 && <section className="report-section" aria-labelledby="found-heading">
-      <h3 id="found-heading">Verified packed references</h3>
+      <h3 id="found-heading">Validated references</h3>
+      <p className="help">Resolved packed paths are present. This confirms file presence only.</p>
       <ReportList items={found} label="verified references" render={item => <AssetFinding finding={item} />} />
     </section>}
     {skipped.length > 0 && <details className="report-section skipped-section">

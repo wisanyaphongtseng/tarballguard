@@ -38,15 +38,20 @@ class ObservedWorker extends NativeWorker {
 window.Worker = ObservedWorker;
 
 async function verify() {
-  await waitFor(() => Boolean(button('Try example')), 'App mount');
+  await waitFor(() => Boolean(button('Run sample scan')), 'App mount');
+  check(document.querySelector('.product-name')?.textContent === 'TarballGuard' &&
+    document.querySelector('.product-subtitle')?.textContent === 'npm Packed Web-Asset Preflight', 'Public brand and subtitle rendered');
+  check(!/\bB08\b|Source repository link pending/iu.test(document.querySelector('#root')!.textContent!), 'Internal branding and source placeholder absent');
+  check(document.querySelector<HTMLAnchorElement>('#source a')?.href === 'https://github.com/wisanyaphongtseng/tarballguard', 'Source fallback uses public GitHub repository');
   check(document.querySelector('h1')!.textContent === "Check what you're actually publishing to npm.", 'Visitor headline states purpose');
   check(document.body.textContent!.includes('Your package is not uploaded.') && document.body.textContent!.includes('Current v0 limitations'), 'Privacy and limitations visible');
-  button('Try example').click();
+  button('Run sample scan').click();
   await waitFor(() => status().includes('Scan complete'), 'Example did not complete');
   check(scans === 1 && results === 1 && exampleFileSent, 'Example File sent through actual native worker; real result received');
   check(document.querySelector('form')!.dataset.inputKind === 'example', 'Demo state identifiable');
   check(document.querySelector('.demo-note')!.textContent!.includes('synthetic demo'), 'Demo labelled separately from user package');
-  check(document.querySelector('.missing-section')!.textContent!.includes('app.js') && document.querySelector('#found-heading')?.textContent === 'Verified packed references', 'Example reports app.js missing and style.css found');
+  check(document.querySelector('.filename')?.textContent === 'Synthetic sample.tgz', 'Sample display avoids internal fixture name');
+  check(document.querySelector('.missing-section')!.textContent!.includes('app.js') && document.querySelector('#found-heading')?.textContent === 'Validated references', 'Example reports app.js missing and style.css found');
   button('Scan another package').click();
   await waitFor(() => status().includes('Choose a package'), 'Reset failed');
   check(!document.querySelector('.audit-report') && document.querySelector('form')!.dataset.inputKind === 'none', 'Reset clears report and demo identity');
