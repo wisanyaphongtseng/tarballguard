@@ -56,7 +56,7 @@ npm run build
 npm run preview
 ```
 
-The build produces static files in `dist/`, including a separate module worker. Deployment is not part of this milestone.
+The build produces static files in `dist/`, including a separate module worker and Cloudflare Pages headers. Node 24.15.0 is pinned in `.nvmrc`. See [deployment and launch acceptance](docs/DEPLOYMENT.md) for Pages settings, production environment names, and the pending public acceptance checklist. A local build does not establish a public launch.
 
 ## Architecture and tests
 
