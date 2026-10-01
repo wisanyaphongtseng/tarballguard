@@ -32,7 +32,7 @@ The development-only `/tests/browser/input-smoke.html` page mounts the real appl
 
 Native file-chooser opening is verified separately. Automated local-path selection may require the browser extension's file-URL permission; that permission is not changed by this milestone. Timeout messages are exercised in unit tests rather than forcing the real browser to consume 30 seconds. Resource timing and code review verify local asset requests and absence of upload code; this is not a full network packet capture.
 
-Run `npm test`, `npm run typecheck`, and `npm run build`. Detailed findings and report controls remain deferred to Milestone 9.
+Run `npm test`, `npm run typecheck`, and `npm run build`. Milestone 9 now replaces the temporary completed-state placeholder with the report described in [RESULTS_UI.md](RESULTS_UI.md). The input lifecycle and worker ownership described here remain unchanged.
 
 Verified in Edge against Vite: application load, click/Enter picker opening with single selection, textarea entry, browser drop/change events, selected filename/size, real missing-reference worker outcome, invalid-policy and malformed-archive messages, Cancel/retry, removal, and successful coverage-limited completion. The main-thread heartbeat advanced 197 times during the busy scan. Resource timing showed only local application/worker assets; browser logs had no errors or warnings. A 390-pixel viewport override showed no horizontal overflow (375 CSS pixels of content with the scrollbar). The override was reset after checking.
 

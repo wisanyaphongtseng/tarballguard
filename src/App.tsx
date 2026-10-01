@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { PackageScanClient } from './worker/client';
 import { canScan, ScanWorkflow } from './ui/scan-workflow';
 import { readableFileSize, visibleFileName } from './ui/file-display';
+import { AuditReport } from './ui/AuditReport';
 
 const statusTitles = {
   idle: 'Choose a package', ready: 'Ready to scan', scanning: 'Scanning locally…',
@@ -78,9 +79,9 @@ export default function App() {
         {state.phase === 'scanning' && <p>Checking your packed files in this browser. You can cancel at any time.</p>}
         {state.phase === 'completed' && state.audit && <>
           <p>Outcome: <code>{state.audit.outcome}</code></p>
-          <p>Detailed report UI coming next.</p>
         </>}
       </section>
+      {state.phase === 'completed' && state.audit && <AuditReport audit={state.audit} />}
       <p className="scope-note">Checks literal HTML asset references and optional required files.
         This does not guarantee that the package works at runtime.</p>
     </main>
