@@ -3,14 +3,18 @@ import { PackageScanClient } from './worker/client';
 import { canScan, ScanWorkflow } from './ui/scan-workflow';
 import { readableFileSize, visibleFileName } from './ui/file-display';
 import { AuditReport } from './ui/AuditReport';
+import { ChecksOverview, LaunchNotes } from './ui/Onboarding';
+import { createBrowserMeasurement } from './measurement/experiment';
+import type { ExperimentMeasurement } from './measurement/experiment';
+import { ExperimentPrompts } from './ui/ExperimentPrompts';
 
 const statusTitles = {
   idle: 'Choose a package', ready: 'Ready to scan', scanning: 'Scanning locally…',
   completed: 'Scan complete', error: 'Scan could not complete', cancelled: 'Scan cancelled',
 };
 
-export default function App() {
-  const [workflow] = useState(() => new ScanWorkflow(new PackageScanClient()));
+export default function App({ measurement }: { measurement?: ExperimentMeasurement } = {}) {
+  const [workflow] = useState(() => new ScanWorkflow(new PackageScanClient(), measurement ?? createBrowserMeasurement()));
   const state = useSyncExternalStore(workflow.subscribe, workflow.getSnapshot, workflow.getSnapshot);
   const picker = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -20,13 +24,20 @@ export default function App() {
     <main>
       <header>
         <p className="product-name">npm Packed Web-Asset Preflight</p>
-        <h1>Check the npm package you are actually publishing.</h1>
-        <p className="intro">Find packed HTML references that point to files missing from the final .tgz.</p>
+        <h1>Check what you're actually publishing to npm.</h1>
+        <p className="intro">Find HTML references that point to files missing from the final packed <code>.tgz</code>.</p>
         <p className="privacy"><strong>Your package stays in this browser.</strong><br />
           Runs locally in your browser. Your package is not uploaded.</p>
       </header>
+      <ChecksOverview />
+      <section className="example-intro" aria-labelledby="example-heading">
+        <div><h2 id="example-heading">Try a synthetic example</h2>
+          <p className="help">HTML references <code>style.css</code> and <code>app.js</code>, but only the stylesheet is packed.
+            No third-party package code. Starts with no required files.</p></div>
+        <button type="button" disabled={state.phase === 'scanning'} onClick={() => { void workflow.tryExample(); }}>Try example</button>
+      </section>
 
-      <form onSubmit={event => { event.preventDefault(); void workflow.start(); }}>
+      <form data-input-kind={state.inputKind ?? 'none'} onSubmit={event => { event.preventDefault(); void workflow.start(); }}>
         <section aria-labelledby="package-label">
           <h2 id="package-label">Package archive</h2>
           <input ref={picker} type="file" accept=".tgz" hidden aria-label="Choose npm .tgz package"
@@ -48,7 +59,8 @@ export default function App() {
           <p id="package-help" className="help">Select the packed .tgz artifact. The archive is validated when you scan.</p>
           {state.file && <div className="selected-file">
             <div><strong className="filename">{visibleFileName(state.file.name)}</strong>
-              <span className="file-size">{readableFileSize(state.file.size)}</span></div>
+              <span className="file-size">{readableFileSize(state.file.size)}</span>
+              {state.inputKind === 'example' && <span className="demo-note">Example package — synthetic demo, not your package.</span>}</div>
             <button type="button" onClick={() => workflow.removeFile()}>Remove file</button>
           </div>}
         </section>
@@ -81,9 +93,16 @@ export default function App() {
           <p>Outcome: <code>{state.audit.outcome}</code></p>
         </>}
       </section>
+      {state.phase === 'completed' && <button type="button" className="scan-another" onClick={() => {
+        workflow.removeFile(); picker.current?.closest('section')?.querySelector<HTMLButtonElement>('.drop-zone')?.focus();
+      }}>Scan another package</button>}
+      {state.phase === 'completed' && state.inputKind === 'example' && <p className="demo-note">Example results — synthetic package.</p>}
       {state.phase === 'completed' && state.audit && <AuditReport audit={state.audit} />}
+      {state.phase === 'completed' && state.experiment && <ExperimentPrompts prompts={state.experiment}
+        answerLaterRelease={yes => workflow.answerLaterRelease(yes)} expressInterest={() => workflow.expressPaidInterest()} />}
       <p className="scope-note">Checks literal HTML asset references and optional required files.
         This does not guarantee that the package works at runtime.</p>
+      <LaunchNotes />
     </main>
   );
 }

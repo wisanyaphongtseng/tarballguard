@@ -133,7 +133,7 @@ test('changing policy clears stale audit without altering path semantics', async
 });
 
 test.each([
-  ['INVALID_POLICY', 'required-file path'], ['UNSUPPORTED_TAR', 'not supported'],
+  ['INVALID_POLICY', 'required-file path'], ['UNSUPPORTED_TAR', 'does not support yet'],
   ['UNSAFE_PATH', 'unsafe'], ['INVALID_GZIP', 'malformed'], ['LIMIT_EXCEEDED', 'limits'],
   ['TIMEOUT', '30 seconds'], ['WORKER_FAILED', 'could not complete'],
 ] as const)('%s produces safe, distinct user message', async (code, text) => {

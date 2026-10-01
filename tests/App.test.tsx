@@ -6,10 +6,31 @@ test('explains packed-artifact scope and local privacy', () => {
   const html = renderToStaticMarkup(<App />);
 
   expect(html).toContain('npm Packed Web-Asset Preflight');
-  expect(html).toContain('Check the npm package you are actually publishing.');
+  expect(html).toContain('Check what you&#x27;re actually publishing to npm.');
   expect(html).toContain('Your package stays in this browser.');
   expect(html).toContain('Your package is not uploaded.');
   expect(html).toContain('does not guarantee that the package works at runtime');
+});
+
+test('public onboarding states scope, npm pack guidance, and limitations', () => {
+  const html = renderToStaticMarkup(<App />);
+  for (const copy of ['What it checks', 'What it doesn&#x27;t check', 'npm pack', 'npm pack --dry-run',
+    'does not create the archive', 'JavaScript imports', 'CSS dependency graphs', 'virtual routes',
+    'Package contents are not uploaded by B08', 'Package code is not executed', 'Install scripts are not run',
+    'TAR, PAX, and GNU', 'Unicode or very long', 'conservatively rejected', 'Root-relative', 'integration or smoke tests']) {
+    expect(html).toContain(copy);
+  }
+  expect(html).toContain('&lt;script src&gt;');
+  expect(html).toContain('&lt;link href&gt;');
+  expect(html).toContain('&lt;img src&gt;');
+});
+
+test('synthetic sample is labelled and public page contains no developer placeholders or guarantees', () => {
+  const html = renderToStaticMarkup(<App />);
+  expect(html).toContain('Try example');
+  expect(html).toContain('No third-party package code');
+  expect(html).toContain('data-input-kind="none"');
+  expect(html).not.toMatch(/safe to publish|\bPASS\b|Milestone|Detailed report UI coming next|developer worker smoke/iu);
 });
 
 test('initial input controls are labelled and scan is disabled', () => {

@@ -21,6 +21,8 @@ button { border: 1px solid #b3bfcd; border-radius: .3rem; background: #fff; colo
 button:hover:not(:disabled) { background: #eef2f6; }
 button:disabled { cursor: not-allowed; opacity: .55; }
 button:focus-visible, textarea:focus-visible { outline: 3px solid #2873ba; outline-offset: 3px; }
+a { color: #245c8d; text-underline-offset: .2em; }
+a:focus-visible { outline: 3px solid #2873ba; outline-offset: 3px; }
 .drop-zone { width: 100%; padding: 1.8rem 1rem; border: 2px dashed #a6b4c4; background: #f8fafc; text-align: center; }
 .drop-zone > span { display: block; pointer-events: none; }
 .drop-zone .drop-title { font-weight: 650; margin-bottom: .35rem; }
@@ -45,10 +47,24 @@ textarea:disabled { background: #f1f4f7; }
 .scan-status.error { border-left: 3px solid #9a4134; }
 code { font-family: ui-monospace, monospace; font-size: .9em; }
 .scope-note { margin-top: 1rem; }
+.checks-overview { margin: 1.4rem 0; padding: 0 .15rem; }
+.checks-overview ul, .launch-notes ul { padding-left: 1.25rem; }
+.checks-overview li, .launch-notes li { margin: .4rem 0; }
+.example-intro { display: flex; align-items: center; gap: 1rem; padding: 1rem; margin: 1.25rem 0; border: 1px solid #d3dbe4; border-radius: .4rem; }
+.example-intro > div { flex: 1; min-width: 0; }
+.example-intro button { flex-shrink: 0; }
+.demo-note { display: block; font-size: .85rem; color: #475569; margin-top: .3rem; }
+.experiment-card { border: 1px solid #d3dbe4; border-radius: .4rem; padding: 1rem; margin: 1rem 0; background: #fff; }
+.experiment-card .actions { margin-top: .75rem; }
+.scan-another { margin-bottom: .5rem; }
+.launch-notes { border-top: 1px solid #d3dbe4; padding-top: 1.5rem; margin-top: 2rem; font-size: .9rem; }
+.launch-notes section { margin-bottom: 1.5rem; }
+.launch-notes p, .launch-notes li { overflow-wrap: anywhere; }
 @media (max-width: 480px) {
   main { margin: 1.5rem auto; padding: 0 1rem; }
   form { padding: 1rem; }
   .selected-file { align-items: flex-start; flex-direction: column; gap: .65rem; }
+  .example-intro { align-items: flex-start; flex-direction: column; }
 }
 
 .audit-report { margin-top: 1.5rem; }
