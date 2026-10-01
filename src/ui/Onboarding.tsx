@@ -35,7 +35,8 @@ export function LaunchNotes({ sourceUrl = import.meta.env.VITE_SOURCE_REPOSITORY
         Package code is not executed. Install scripts are not run.</p></div>
       <div><h4>Coarse usage metrics</h4><p>Coarse anonymous usage events may be sent to PostHog. Events contain no filenames, paths,
         package contents, reference values, or required-file values. A random browser-local identifier
-        may be used to estimate repeat usage.</p></div></div>
+        may be used to estimate repeat usage. Ownership answers and coarse HTML-check flags may be sent;
+        versions, hashes and error text are never sent. A required-policy comparison digest stays only in this browser.</p></div></div>
     </section>
     <section id="limitations" aria-labelledby="limitations-heading">
       <h3 id="limitations-heading">Current v0 limitations</h3>
@@ -43,6 +44,7 @@ export function LaunchNotes({ sourceUrl = import.meta.env.VITE_SOURCE_REPOSITORY
         <li>Some TAR, PAX, and GNU variants are unsupported. Some Unicode or very long npm paths may therefore be rejected.</li>
         <li>Unusual HTML structures may be conservatively rejected to keep processing bounded.</li>
         <li>Root-relative or runtime-dependent paths may be UNKNOWN.</li>
+        <li>Relative references affected by <code>{'<base href>'}</code> and percent-bearing relative URL paths are UNKNOWN.</li>
         <li>Static checks do not replace integration or smoke tests.</li>
       </ul>
       <p className="help">Experimental v0. A result describes only the checks performed.</p>

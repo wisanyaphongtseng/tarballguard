@@ -16,13 +16,11 @@ describe('package-relative reference resolution', () => {
     ['style.css', 'dist/pages/style.css'],
     ['././assets/../app.js', 'dist/pages/app.js'],
     ['assets//images///logo.svg', 'dist/pages/assets/images/logo.svg'],
+    ['./app.js?q=hello%20world#caf%C3%A9', 'dist/pages/app.js'],
     ['./app.js?v=123', 'dist/pages/app.js'],
     ['./app.js#boot', 'dist/pages/app.js'],
     ['./app.js?v=123#boot', 'dist/pages/app.js'],
     ['./app.js#boot?theme=dark', 'dist/pages/app.js'],
-    ['./hello%20world.js', 'dist/pages/hello%20world.js'],
-    ['./%2e%2e/secret.js', 'dist/pages/%2e%2e/secret.js'],
-    ['./%2F%5C%3A.js', 'dist/pages/%2F%5C%3A.js'],
     ['./App.js', 'dist/pages/App.js'],
     ['./café.svg', 'dist/pages/café.svg'],
     ['./cafe\u0301.svg', 'dist/pages/cafe\u0301.svg'],
@@ -81,6 +79,7 @@ describe('conservative reference classification', () => {
   });
 
   test.each([
+    './hello%20world.js', './%2e%2e/secret.js', './%2F%5C%3A.js', 'bad%ZZ.js',
     '?theme=dark', '?', '/assets/app.js', '', '   ', ' app.js', 'app.js ',
     '{{ asset }}', '${asset}', '<%= asset %>', '@asset', 'assets/{{ name }}.js',
     'app.js?version=${version}', '.\\app.js', 'C:/file.js', 'foo:bar', './foo:bar',

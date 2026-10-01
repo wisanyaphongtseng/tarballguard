@@ -1,14 +1,14 @@
 import { captureConfig, COHORT_PATTERN, DirectCapture } from './capture';
-import { coarseErrorCategory, makeEvent } from './events';
-import type { CoarseCompletion, EventName } from './events';
+import { coarseErrorCategory, makeEvent, isArtifactProvenance } from './events';
+import type { ArtifactProvenance, CoarseCompletion, EventName } from './events';
 
-export const EXPERIMENT_KEY = 'b08.experiment.v1';
+export const EXPERIMENT_KEY = 'b08.experiment.v2';
 export const INTERNAL_KEY = 'b08.internal';
 export const MAX_POLICY_HISTORY = 8;
 export const REUSE_DELAY_MS = 30 * 60 * 1000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
-interface PolicyRecord { digest: string; visit: string; completedAt: number }
-interface Metadata { cohort: string; completedReal: boolean; policies: PolicyRecord[] }
+interface PolicyRecord { digest: string; visit: string; completedAt: number; htmlRelevant: boolean }
+interface Metadata { cohort: string; completedRelevantOwn: boolean; policies: PolicyRecord[] }
 type LocalStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 export interface ExperimentEnvironment {
   token?: string; host?: string; development: boolean; hostname: string;
@@ -20,9 +20,9 @@ export interface ExperimentPrompts {
   readonly laterAnswered?: boolean; readonly interestSent?: boolean;
 }
 export interface ExperimentAttempt {
-  readonly requiredPolicyUsed: boolean; readonly priorReal: boolean;
+  readonly requiredPolicyUsed: boolean; readonly priorReal: boolean; readonly provenance: ArtifactProvenance;
   readonly digest: Promise<string | undefined>;
-  finished: boolean; completed: boolean; laterAnswered: boolean; interestSent: boolean; meaningful: boolean;
+  finished: boolean; completed: boolean; laterAnswered: boolean; interestSent: boolean; meaningful: boolean; htmlRelevant: boolean; evidenceOpened: boolean;
 }
 
 export function isLocalHost(hostname: string): boolean {
@@ -51,15 +51,15 @@ function readMetadata(storage: LocalStorage): Metadata | undefined {
   if (!raw || raw.length > 4096) return undefined;
   try {
     const data = JSON.parse(raw) as Metadata;
-    if (!COHORT_PATTERN.test(data.cohort) || typeof data.completedReal !== 'boolean' || !Array.isArray(data.policies)) return undefined;
+    if (!COHORT_PATTERN.test(data.cohort) || typeof data.completedRelevantOwn !== 'boolean' || !Array.isArray(data.policies)) return undefined;
     const policies: PolicyRecord[] = [];
     for (const record of data.policies.slice(-MAX_POLICY_HISTORY)) {
       if (record && /^[0-9a-f]{64}$/u.test(record.digest) && UUID.test(record.visit) &&
-        Number.isSafeInteger(record.completedAt) && record.completedAt >= 0) {
-        policies.push({ digest: record.digest, visit: record.visit, completedAt: record.completedAt });
+        Number.isSafeInteger(record.completedAt) && record.completedAt >= 0 && typeof record.htmlRelevant === 'boolean') {
+        policies.push({ digest: record.digest, visit: record.visit, completedAt: record.completedAt, htmlRelevant: record.htmlRelevant });
       }
     }
-    return { cohort: data.cohort, completedReal: data.completedReal, policies };
+    return { cohort: data.cohort, completedRelevantOwn: data.completedRelevantOwn, policies };
   } catch { return undefined; }
 }
 
@@ -104,55 +104,65 @@ export class ExperimentMeasurement {
     if (!this.ready() || !event || !this.metadata) return;
     try { this.capture?.capture(this.metadata.cohort, event); } catch { /* Best effort only. */ }
   }
-  start(paths: readonly string[], source: 'user' | 'example' | null): ExperimentAttempt | undefined {
-    if (source !== 'user' || !this.ready()) return undefined;
+  start(paths: readonly string[], source: 'user' | 'example' | null, provenance: ArtifactProvenance = 'unknown'): ExperimentAttempt | undefined {
+    if (source !== 'user' || !isArtifactProvenance(provenance) || !this.ready()) return undefined;
     if (!this.metadata) {
-      this.metadata = { cohort: `b08_${this.env.crypto.randomUUID()}`, completedReal: false, policies: [] };
+      this.metadata = { cohort: `b08_${this.env.crypto.randomUUID()}`, completedRelevantOwn: false, policies: [] };
       if (!COHORT_PATTERN.test(this.metadata.cohort) || !this.save()) return undefined;
     }
-    const attempt: ExperimentAttempt = { requiredPolicyUsed: paths.length > 0, priorReal: this.metadata.completedReal,
-      digest: policyDigest(paths, this.env.crypto), finished: false, completed: false, laterAnswered: false, interestSent: false, meaningful: false };
-    this.emit('b08_real_scan_started', { required_policy_used: attempt.requiredPolicyUsed });
+    const attempt: ExperimentAttempt = { provenance, requiredPolicyUsed: paths.length > 0, priorReal: this.metadata.completedRelevantOwn,
+      digest: policyDigest(paths, this.env.crypto), finished: false, completed: false, laterAnswered: false, interestSent: false, meaningful: false, htmlRelevant: false, evidenceOpened: false };
+    this.emit('b08_real_scan_started', { required_policy_used: attempt.requiredPolicyUsed, artifact_provenance: attempt.provenance });
     return attempt;
   }
   complete(attempt: ExperimentAttempt, coarse: CoarseCompletion): ExperimentPrompts | undefined {
     if (!this.ready() || attempt.finished || !this.metadata) return undefined;
     attempt.finished = true;
     attempt.completed = true;
-    attempt.meaningful = coarse.supported_check_performed;
+    attempt.htmlRelevant = coarse.html_present && coarse.html_scanned && coarse.local_html_reference_checked;
+    attempt.meaningful = attempt.provenance === 'own' && attempt.htmlRelevant && coarse.supported_check_performed;
     this.emit('b08_real_scan_completed', { outcome: coarse.outcome, missing_found: coarse.missing_found,
       unknown_or_coverage_present: coarse.unknown_or_coverage_present, required_policy_used: attempt.requiredPolicyUsed,
-      supported_check_performed: coarse.supported_check_performed });
-    this.metadata.completedReal = true;
+      supported_check_performed: coarse.supported_check_performed, artifact_provenance: attempt.provenance,
+      html_present: coarse.html_present, html_scanned: coarse.html_scanned, local_html_reference_checked: coarse.local_html_reference_checked });
+    if (attempt.meaningful) this.metadata.completedRelevantOwn = true;
     if (!this.save()) return undefined;
     void attempt.digest.then(digest => {
-      if (!digest || !this.ready() || !this.metadata) return;
+      if (!digest || attempt.provenance !== 'own' || !coarse.supported_check_performed || !this.ready() || !this.metadata) return;
       const prior = this.metadata.policies.find(record => record.digest === digest);
       const now = this.env.now();
-      if (prior && prior.visit !== this.visit && now - prior.completedAt >= REUSE_DELAY_MS) this.emit('b08_required_policy_reused');
+      if (prior && prior.visit !== this.visit && now - prior.completedAt >= REUSE_DELAY_MS) this.emit('b08_required_policy_reused', { local_html_reference_checked: attempt.htmlRelevant,
+        prior_local_html_reference_checked: prior.htmlRelevant });
       this.metadata.policies = [...this.metadata.policies.filter(record => record.digest !== digest),
-        { digest, visit: this.visit, completedAt: now }].slice(-MAX_POLICY_HISTORY);
+        { digest, visit: this.visit, completedAt: now, htmlRelevant: attempt.htmlRelevant }].slice(-MAX_POLICY_HISTORY);
       this.save();
     }).catch(() => {});
-    return Object.freeze({ laterRelease: attempt.priorReal,
+    return Object.freeze({ laterRelease: attempt.priorReal && attempt.meaningful,
       paidInterest: attempt.meaningful && attempt.requiredPolicyUsed, requiredPolicyUsed: attempt.requiredPolicyUsed });
   }
   fail(attempt: ExperimentAttempt, code: unknown): void {
     if (attempt.finished) return;
     attempt.finished = true;
     const category = coarseErrorCategory(code);
-    if (category) this.emit('b08_real_scan_failed', { category });
+    if (category) this.emit('b08_real_scan_failed', { category, artifact_provenance: attempt.provenance });
   }
   answerLaterRelease(attempt: ExperimentAttempt, yes: boolean): boolean {
-    if (!this.ready() || !attempt.completed || !attempt.priorReal || attempt.laterAnswered) return false;
+    if (!this.ready() || !attempt.completed || !attempt.priorReal || !attempt.meaningful || attempt.laterAnswered) return false;
     attempt.laterAnswered = true;
     if (yes) this.emit('b08_later_release_confirmed');
+    return true;
+  }
+  openEvidence(attempt: ExperimentAttempt): boolean {
+    if (!this.ready() || !attempt.completed || attempt.evidenceOpened) return false;
+    attempt.evidenceOpened = true;
+    this.emit('b08_evidence_opened', { artifact_provenance: attempt.provenance,
+      local_html_reference_checked: attempt.htmlRelevant, required_policy_used: attempt.requiredPolicyUsed });
     return true;
   }
   paidInterest(attempt: ExperimentAttempt): boolean {
     if (!this.ready() || !attempt.completed || !attempt.meaningful || !attempt.requiredPolicyUsed || attempt.interestSent) return false;
     attempt.interestSent = true;
-    this.emit('b08_paid_pack_interest', { required_policy_used: attempt.requiredPolicyUsed });
+    this.emit('b08_paid_pack_interest', { required_policy_used: attempt.requiredPolicyUsed, artifact_provenance: attempt.provenance });
     return true;
   }
 }

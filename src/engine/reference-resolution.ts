@@ -9,6 +9,7 @@ export type ResolvedReference =
 export function resolveHtmlReference(
   htmlPath: string,
   original: HtmlReference,
+  hasBaseHref = false,
 ): ResolvedReference {
   const unknown = (reason: string): ResolvedReference => Object.freeze({ status: 'UNKNOWN', original, reason });
   const skipped = (reason: string): ResolvedReference => Object.freeze({ status: 'SKIPPED', original, reason });
@@ -39,6 +40,8 @@ export function resolveHtmlReference(
   if (value.startsWith('/')) return unknown('Web-root-relative URL cannot be mapped to the package root.');
 
   const path = value.split(/[?#]/u, 1)[0];
+  if (path.includes('%')) return unknown('Percent-bearing relative URL paths are unsupported; URL decoding is not inferred.');
+  if (hasBaseHref) return unknown('Document has <base href>; relative URL targets cannot be mapped confidently.');
   if (path.includes(':')) return unknown('Colon-containing paths are unsupported.');
   const segments = path.split('/');
   if (['', '.', '..'].includes(segments[segments.length - 1])) {

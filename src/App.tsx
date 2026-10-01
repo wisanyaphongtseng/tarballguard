@@ -6,6 +6,7 @@ import { AuditReport } from './ui/AuditReport';
 import { ChecksOverview, LaunchNotes } from './ui/Onboarding';
 import { createBrowserMeasurement } from './measurement/experiment';
 import type { ExperimentMeasurement } from './measurement/experiment';
+import type { ArtifactProvenance } from './measurement/events';
 import { ExperimentPrompts } from './ui/ExperimentPrompts';
 
 const statusTitles = {
@@ -68,6 +69,16 @@ export default function App({ measurement }: { measurement?: ExperimentMeasureme
                   {state.inputKind === 'example' && <span className="demo-note">Example package — synthetic demo, not your package.</span>}</div>
                 <button type="button" onClick={() => workflow.removeFile()}>Remove file</button>
               </div>}
+              {state.inputKind === 'user' && <div className="artifact-provenance">
+                <label htmlFor="artifact-provenance">Is this your package? <span className="optional">(optional)</span></label>
+                <p id="provenance-help" className="help">Helps measure this experiment. Does not affect the checks.</p>
+                <select id="artifact-provenance" aria-describedby="provenance-help" value={state.artifactProvenance}
+                  disabled={state.phase === 'scanning'} onChange={event => workflow.setProvenance(event.currentTarget.value as ArtifactProvenance)}>
+                  <option value="unknown">Prefer not to say / not sure</option>
+                  <option value="own">My package</option>
+                  <option value="third_party">Someone else's package</option>
+                </select>
+              </div>}
             </section>
 
             <section className="policy-input">
@@ -107,6 +118,7 @@ export default function App({ measurement }: { measurement?: ExperimentMeasureme
           {state.phase === 'scanning' && <p>Checking your packed files in this browser. You can cancel at any time.</p>}
           {state.phase === 'completed' && state.audit && <>
             <p>Outcome: <code>{state.audit.outcome}</code></p>
+            <a href="#report-heading" onClick={() => workflow.openEvidence()}>View evidence</a>
           </>}
         </section>
         {state.phase === 'completed' && <button type="button" className="scan-another" onClick={() => {

@@ -3,12 +3,16 @@ import { ScanError } from '../worker/client';
 import { createExamplePackage } from './example-package';
 import type { ExperimentAttempt, ExperimentMeasurement, ExperimentPrompts } from '../measurement/experiment';
 
+import { isArtifactProvenance } from '../measurement/events';
+import type { ArtifactProvenance } from '../measurement/events';
+
 export type ScanPhase = 'idle' | 'ready' | 'scanning' | 'completed' | 'error' | 'cancelled';
 export interface ScanState {
   readonly phase: ScanPhase;
   readonly file: File | null;
   readonly inputKind: 'user' | 'example' | null;
   readonly requiredText: string;
+  readonly artifactProvenance: ArtifactProvenance;
   readonly audit?: PackageAudit;
   readonly message?: string;
   readonly experiment?: ExperimentPrompts;
@@ -55,7 +59,7 @@ export function canScan(state: ScanState): boolean {
 
 /** UI lifecycle only. No archive, path, or finding logic belongs here. */
 export class ScanWorkflow {
-  private state: ScanState = Object.freeze({ phase: 'idle', file: null, inputKind: null, requiredText: '' });
+  private state: ScanState = Object.freeze({ phase: 'idle', file: null, inputKind: null, requiredText: '', artifactProvenance: 'unknown' });
   private generation = 0;
   private listeners = new Set<() => void>();
   private experimentAttempt?: ExperimentAttempt;
@@ -80,7 +84,7 @@ export class ScanWorkflow {
   selectFiles(files: readonly File[], inputKind: 'user' | 'example' = 'user'): void {
     if (files.length === 0) return; // Dismissing the picker keeps the current selection.
     this.interrupt();
-    const base = { requiredText: this.state.requiredText, file: null, inputKind: null };
+    const base = { requiredText: this.state.requiredText, file: null, inputKind: null, artifactProvenance: 'unknown' as const };
     if (files.length !== 1) {
       this.update({ ...base, phase: 'error', message: 'Choose one npm .tgz package at a time.' });
     } else if (!/\.tgz$/iu.test(files[0].name)) {
@@ -91,11 +95,18 @@ export class ScanWorkflow {
   }
   removeFile(): void {
     this.interrupt();
-    this.update({ phase: 'idle', file: null, inputKind: null, requiredText: this.state.requiredText });
+    this.update({ phase: 'idle', file: null, inputKind: null, requiredText: this.state.requiredText, artifactProvenance: 'unknown' });
   }
   setRequiredText(requiredText: string): void {
     if (this.state.phase === 'scanning') return;
-    this.update({ file: this.state.file, inputKind: this.state.inputKind, requiredText, phase: this.state.file ? 'ready' : 'idle' });
+    this.experimentAttempt = undefined;
+    this.update({ file: this.state.file, inputKind: this.state.inputKind, artifactProvenance: this.state.artifactProvenance, requiredText, phase: this.state.file ? 'ready' : 'idle' });
+  }
+  setProvenance(artifactProvenance: ArtifactProvenance): void {
+    if (this.state.phase === 'scanning' || this.state.inputKind !== 'user' || !isArtifactProvenance(artifactProvenance)) return;
+    this.experimentAttempt = undefined;
+    this.update({ file: this.state.file, inputKind: this.state.inputKind, requiredText: this.state.requiredText,
+      artifactProvenance, phase: this.state.file ? 'ready' : 'idle' });
   }
   async tryExample(): Promise<void> {
     if (this.state.phase === 'scanning') return;
@@ -106,11 +117,11 @@ export class ScanWorkflow {
   async start(): Promise<void> {
     if (!canScan(this.state)) return;
     const generation = ++this.generation;
-    const { file, requiredText, inputKind } = this.state;
+    const { file, requiredText, inputKind, artifactProvenance } = this.state;
     const requiredPaths = requiredPathsFromText(requiredText);
-    const attempt = this.observe(() => this.measurement?.start(requiredPaths, inputKind));
+    const attempt = this.observe(() => this.measurement?.start(requiredPaths, inputKind, artifactProvenance));
     this.experimentAttempt = attempt;
-    this.update({ phase: 'scanning', file, requiredText, inputKind });
+    this.update({ phase: 'scanning', file, requiredText, inputKind, artifactProvenance });
     try {
       const audit = await this.client.scan(file!, requiredPaths);
       if (generation === this.generation) {
@@ -118,14 +129,21 @@ export class ScanWorkflow {
           outcome: audit.outcome, missing_found: audit.summary.missing > 0,
           unknown_or_coverage_present: audit.summary.unknown > 0 || audit.summary.htmlFilesNotScanned > 0,
           required_policy_used: requiredPaths.length > 0, supported_check_performed: audit.summary.checkedAssertions > 0,
+          html_present: audit.summary.htmlFilesDiscovered > 0, html_scanned: audit.summary.htmlFilesScanned > 0,
+          local_html_reference_checked: audit.htmlFindings.some(f => f.status === 'FOUND' || f.status === 'MISSING'),
         })) : undefined;
-        this.update({ phase: 'completed', file, requiredText, inputKind, audit, experiment });
+        this.update({ phase: 'completed', file, requiredText, inputKind, artifactProvenance, audit, experiment });
       }
     } catch (error) {
       if (generation !== this.generation) return;
       if (attempt) this.observe(() => this.measurement?.fail(attempt, error instanceof ScanError ? error.code : undefined));
       this.update({ phase: error instanceof ScanError && error.code === 'CANCELLED' ? 'cancelled' : 'error',
-        file, requiredText, inputKind, message: scanErrorMessage(error) });
+        file, requiredText, inputKind, artifactProvenance, message: scanErrorMessage(error) });
+    }
+  }
+  openEvidence(): void {
+    if (this.state.phase === 'completed' && this.experimentAttempt) {
+      this.observe(() => this.measurement?.openEvidence(this.experimentAttempt!));
     }
   }
   answerLaterRelease(yes: boolean): void {
@@ -145,7 +163,7 @@ export class ScanWorkflow {
   cancel(): void {
     if (this.state.phase !== 'scanning') return;
     this.interrupt();
-    this.update({ phase: 'cancelled', file: this.state.file, inputKind: this.state.inputKind, requiredText: this.state.requiredText,
+    this.update({ phase: 'cancelled', file: this.state.file, inputKind: this.state.inputKind, requiredText: this.state.requiredText, artifactProvenance: this.state.artifactProvenance,
       message: 'Scan cancelled. Your package is still selected.' });
   }
 }

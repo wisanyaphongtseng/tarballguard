@@ -69,7 +69,7 @@ describe('single HTML file asset scanning', () => {
     expect(Object.isFrozen(findings[0].reference.location)).toBe(true);
   });
 
-  test('matches case, Unicode forms, and percent sequences exactly', async () => {
+  test('matches case and Unicode exactly but treats percent paths as unknown', async () => {
     const index = await ingestArchive(tgzFixture([
       { path: 'package/index.html', content: '<img src="App.js"><img src="app.js">' +
         '<img src="café.svg"><img src="cafe\u0301.svg"><img src="hello%20world.js">' +
@@ -79,7 +79,7 @@ describe('single HTML file asset scanning', () => {
       { path: 'package/%2e%2e/secret.js' },
     ]));
     expect(scanHtmlFile(index, 'index.html').map(finding => finding.status))
-      .toEqual(['FOUND', 'MISSING', 'FOUND', 'MISSING', 'FOUND', 'MISSING', 'FOUND']);
+      .toEqual(['FOUND', 'MISSING', 'FOUND', 'MISSING', 'UNKNOWN', 'UNKNOWN', 'UNKNOWN']);
   });
 
   test.each([

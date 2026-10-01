@@ -169,3 +169,7 @@ form > .actions { padding: 1rem 1.5rem; border-top: 1px solid var(--border); bac
   .required-section .report-list > li { grid-template-columns: 1fr; gap: .5rem; }
   .trust-badges { gap: .4rem; }
 }
+
+.artifact-provenance { margin-top: 1rem; }
+.artifact-provenance label { display: block; font-weight: 600; }
+.artifact-provenance select { width: 100%; padding: .65rem; font: inherit; color: inherit; background: var(--surface, #fff); border: 1px solid var(--border, #d1d5db); border-radius: .35rem; }
